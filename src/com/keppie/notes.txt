@@ -1,0 +1,218 @@
+het gekke is nu dat ik op dit moment (zondag 9 feb) de bonus products lijst nergens meer kan vinden in de .html files van de ah site.... in Pringles Tortilla chips nacho cheese bestellen _ Albert Heijn.html die ik donderdag 6 feb heb gedownload zit iet wel maar als ik die file nu download kan ik er geen lijst in vinden.
+
+in ah-allesreiniger-spray.css van wi238142 folder in HeadlessOutput staat een korte var products met broden??
+
+breadcrumbs categoriseerd producten hierarchisch
+
+bonus producten lijst:
+Pringles Tortilla chips nacho cheese bestellen _ Albert Heijn.html
+var products
+
+Doel in eerste instantie: zo veel mogelijk geautomatiseerd een lijst genereren van alle bonusartikelen(450) gesorteerd op kortingPercentage
+Doel in tweede instantie: een (te monotizen) gelikte flutterapp maken die een firebase database queried.
+Maarten&Maddy kunnen betatesten. Sowieso de percentagelijst met hen delen zodra de eerste versie er is om animo te peilen.
+
+PostGreSQL database maken met zoveel mogelijk te vullen velden op basis van productpagina .html (primary key: {wi_id}) (secundary key {my_id}(bijv: "kp_id"))
+productpagina's: "https://www.ah.nl/producten/product/{wi_id}"
+
+vervolgens kunnen velden ingevuld worden door de .html te parsen
+de producten moeten ook een bonusActieCatogorieId krijgen oid. die producten moet je kunnen "inklappen"
+GRAAG OOK EEN STREEPJESCODE (in cijfers uitgedrukt)
+wat is "Nasa nummer"?
+
+methods maken als:
+	String extract_bonusType(htmlFile){}
+	String extract_price(htmlFile){}
+	String extract_...(htmlFile){}
+
+per .html een .ini(of JSON!) opbouwen met de gevonden attributen:
+price="2.99"
+bonusType="2 voor 2.99"
+
+vervolgens een method on de .ini's of .json's uit te lezen, de strings naar de juiste types converteren en naar de db te schrijven
+
+vervolgens is het een kwestie van een app ontwikkelen die queries naar de db bouwt en de resultaten toont
+
+String[] wi_ids = new String{"wi169447", "wi123849", "wi123847", "wi447874"};
+beter is waarschijnlijk om een bestand op te slaan dat een lijst(\r\n gescheiden) is van 
+het binnenhalen van de lijst en het genereren van het bestand is te automatiseren met een method(low prio)
+
+productdatabase opbouwen met wi_nummer en zoveel mogelijk attributen uit de .html van de product pagina geparsed
+in ieder geval: 
+
+verder kolommen: 
+	boolean         : week_6_bonus		    {true, false}
+	enum(of string) : week_6_bonusType	    {'2voor', '2+1', '1+1', ...}
+	double          : week_6_kortingPercentage  {'50.0', '0.666...', ...}
+
+1+1: 50.0
+2+1: 0.667
+2voor: 2voorPrice / (price*2)
+1voor: bonusPrice / price 
+
+====================================================================================================
+"price": "{price}"
+"price": "2.19"
+"bonus\",\"text\":\"2 voor 2.99\"
+
+"price": "1.59"
+"bonus\",\"text\":\"2 + 1 gratis\"
+
+pringles:
+"bonus\",\"now\":0.99,\"was\":2.19
+unitsize:
+"unitSize\":\"160 g\"
+
+"price-amount_integer__OuZOn">		{*100}	</span>
+"price-amount_fractional__2DgNL">	{}		</span>
+
+====================================================================================================
+1+1 (-50%)
+2+1 (-33%)
+3+1 (-25%)
+
+1 voor ...  (1-(nieuw/oud))
+2 voor ...  (1-(prijs/(oud*2)))
+3 voor ...  (1-(prijs/(oud*3)))
+4 voor ...  (1-(prijs/(oud*4)))
+
+10% korting (-10%)
+20, 25, 30, 40, 50, 60, etc.. (-{}%)
+
+2e halve prijs (-25%)
+
+stapelen..
+..
+
+
+====================================================================================================
+
+{e.exports={root:"tiered-offer_root__2CofT",amount:"tiered-offer_amount__A3hM5",discount:"tiered-offer_discount__13OD7",line:"tiered-offer_line__1dR4K"}}}]);
+
+====================================================================================================
+
+bonus_type{"2 stapelen", "3 stapelen", "4 stapelen"}
+
+====================================================================================================
+
+
+Make a method to write an entire new product to the database for the first time with all attributes2fields
+this should make it so that in the end it will take way less database queries to build the end resulting table
+keeping seperate database queries to a minimum is considered best practice.
+
+Make a class ExtractionFields and constructor of an ArrayList (OR NAMEDLIST???) of ExtractionField extractionFields<ExtractionField>
+//Maybe it doesn't have to be a seperate class though...
+Add Product.extractionFields property.
+In the initialisation of products[] construct an E
+Add entries by calling the constructor and initializing the fields (abstracted away to a method)
+Loop over the products[]
+	Loop over ExtractionFields<>
+		Call the .execute method to assign the attributes to the products using this.-..
+		possibly putting in if statements like:
+		if (product[i].ExtractionFields.get(j).name.equals("foo")) {continue;}
+		to easily comment in and out individual fields.
+		products[i].ExtractionFields.get(j).execute;
+
+public void ExtractionField.toDb(Product) {
+	// instead of calling either updateString, updateInt or updateDouble; method overloading should be used for this!
+	// implement DbUpdate(String, String) , DbUpdate(String, int) , DbUpdate(String, double)
+	if (this.dbType == Main.dbType.VARCHAR16|this.dbType == Main.dbType.VARCHAR64|this.dbType == Main.dbType.TEXT) {
+		DbUpdate(String dbField=this.name, String value=this.valueString);
+	} else if (this.dbType == Main.dbType.INT) {
+		DbUpdate(String dbField=this.name, int value=this.valueInt);
+	} else if (this.dbType == Main.dbType.DOUBLE) {
+		DbUpdate(String dbField=this.name, String value=this.valueDouble);
+	}
+}
+
+Product.writeAttributesToDb
+Loop over the products[]
+
+====================================================================================================
+
+https://www.ah.nl/producten/aardappel-groente-fruit?kenmerk=bonus					 46
+https://www.ah.nl/producten/verse-kant-en-klaar-maaltijden-salades?kenmerk=bonus	 60
+https://www.ah.nl/producten/vlees-kip-vis-vega?kenmerk=bonus						 55
+https://www.ah.nl/producten/kaas-vleeswaren-delicatessen?kenmerk=bonus				150
+https://www.ah.nl/producten/zuivel-eieren?kenmerk=bonus								 54
+https://www.ah.nl/producten/bakkerij?kenmerk=bonus									 40
+https://www.ah.nl/producten/ontbijtgranen-broodbeleg-tussendoor?kenmerk=bonus		164
+https://www.ah.nl/producten/frisdrank-sappen-koffie-thee?kenmerk=bonus				234
+https://www.ah.nl/producten/wijn?kenmerk=bonus										196
+https://www.ah.nl/producten/bier-sterke-drank-aperitieven?kenmerk=bonus				177
+https://www.ah.nl/producten/pasta-rijst-internationale-keuken?kenmerk=bonus			119
+https://www.ah.nl/producten/soepen-conserven-sauzen-smaakmakers?kenmerk=bonus		162
+https://www.ah.nl/producten/snoep-koek-chips?kenmerk=bonus							215
+https://www.ah.nl/producten/diepvries?kenmerk=bonus									 39
+https://www.ah.nl/producten/drogisterij-baby?kenmerk=bonus							996		/ 1992
+https://www.ah.nl/producten/bewuste-voeding?kenmerk=bonus							 52
+https://www.ah.nl/producten/huishouden-huisdier?kenmerk=bonus						219     /  438
+https://www.ah.nl/producten/koken-tafelen-non-food?kenmerk=bonus					143
+
+&page=99 plakken aan het einde van de url om alles in een keer te laden
+
+regex search:
+(href="https://www.ah.nl/producten/product/wi)(\d*)(/)
+met bovenstaande regex precies alles 2 keer.
+dubbelen filteren.
+
+3121
+
+<a href="/producten/product/wi473098/olcay-gulsen-dames-nachthemd-s-m" title="Olcay Gulsen Dames nachthemd S/M" class="link_root__1wBtf product-card-portrait_link__2uivb" tabindex="-1" data-analytics="LINK_CLICK" data-analytics-meta="%7B%22id%22%3A%22wi473098%22%2C%22key%22%3A%22products%22%7D"><strong class="title_root__3ZmV9 product-card-portrait_title__2gFz1" data-testhook="product-title"><span class="line-clamp line-clamp--active title_lineclamp__23pTR" style="-webkit-line-clamp: 2; line-height: 1.3em; max-height: 2.6em;">Olcay Gulsen Dames nachthemd S/M</span></strong></a>
+
+https://www.ah.nl/producten/drogisterij-baby?kenmerk=bonus&page=12
+
+CONFIRMED: PRODUCTEN KOMEN VOOR IN MEERDERE CATAGORIËN, ZIE BIJV. DR. OETKER RISTORANTE PIZZA IN ZOWEL Verse kant-en-klaar maaltijden, salades ALS Diepvries
+
+====================================================================================================
+
+((prijs nu/gram) / (prijs normaal/1000)) * 100
+
+maak bonusType een enum.
+{WAS_NOW_WITHOUT_WAS, STAPELEN_2, STAPELEN_3, 2E_HALVE_PRIJS, 2_VOOR_1, 3_VOOR_2, etc}
+
+HashMap<String, ArrayList<String>> extractionFields
+
+====================================================================================================
+
+
+work with different git branches
+extractionfields rework
+read user/pw/dburl from unversioned file
+make new github
+git push naar github
+checken of tabel bestaat en niet leeg is. als tabel bestaat en niet leeg is nieuwe tabel aanmaken?
+aan het einde van het programma met java ***REMOVED*** een csv outputfile laten maken
+
+====================================================================================================
+
+List saved.
+This week's list read. wi_ids.size(): 2544
+Exception in thread "main" java.lang.NullPointerException
+	at com.keppie.Main.headlessDownloadToFolder(Main.java:78)
+	at com.keppie.Main.main(Main.java:388)
+
+Process finished with exit code 1
+
+====================================================================================================
+
+1956/2878 Downloading (headless) wi411518 HTML-File from https://www.ah.nl/producten/product/wi411518 ...
+1957/2878 Downloading (headless) wi451181 HTML-File from https://www.ah.nl/producten/product/wi451181 ...
+Exception in thread "main" java.io.IOException: File already exists: C:\DATA Samsung 500GB SSD\git\Code\InteliJ\week_9\HeadlessHTML_week_9\wi451181\ns.html_____.html
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.save(XmlSerializer.java:65)
+	at com.gargoylesoftware.htmlunit.html.HtmlPage.save(HtmlPage.java:2279)
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.getAttributesFor(XmlSerializer.java:228)
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.readAttributes(XmlSerializer.java:194)
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.printOpeningTag(XmlSerializer.java:174)
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.printXml(XmlSerializer.java:113)
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.printXml(XmlSerializer.java:123)
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.printXml(XmlSerializer.java:123)
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.printXml(XmlSerializer.java:123)
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.printXml(XmlSerializer.java:123)
+	at com.gargoylesoftware.htmlunit.html.XmlSerializer.save(XmlSerializer.java:82)
+	at com.gargoylesoftware.htmlunit.html.HtmlPage.save(HtmlPage.java:2279)
+	at com.keppie.AhLib.dlHtmlHeadless(AhLib.java:99)
+	at com.keppie.Main.headlessDownloadToFolder(Main.java:82)
+	at com.keppie.Main.main(Main.java:360)
+
+Process finished with exit code 1
