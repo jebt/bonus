@@ -8,6 +8,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -68,7 +69,7 @@ public class Main {
     static Pattern WAS_NOW_PATTERN_GALL;
     static Matcher matcher;
 
-    static void downloadToFolder(String toPath) throws IOException {
+    static void downloadToFolder(String toPath, ArrayList<String> wi_ids) throws IOException {
         for (int i = 0; i < wi_ids.size(); i++) {
             if (ONLY_DO_FIRST_THREE) {
                 if (i > 2) break;
@@ -78,7 +79,7 @@ public class Main {
             AhLib.dlHtml(BASE_URL, wi_ids.get(i), toPath);
         }
     }
-    static void headlessDownloadToFolder(String toPath) throws IOException, InterruptedException {
+    static void headlessDownloadToFolder(String toPath, ArrayList<String> wi_ids) throws IOException, InterruptedException {
         for (int i = 0; i < wi_ids.size(); i++) {
             if (ONLY_DO_FIRST_THREE) {
                 if (i > 2) break;
@@ -344,13 +345,14 @@ public class Main {
 
     //todo####################################################################################################
 
-    public static void main(String[] args) throws IOException, InterruptedException, SQLException {
+    public static void main(String[] args) throws IOException, InterruptedException, SQLException, ClassNotFoundException {
 
         System.out.println("Starting process for week " + CURRENT_WEEK + "...");
         final long startTime = System.nanoTime();
         System.out.println(startTime);
 
-        checkCreateWeekDir();
+        Connection conn = AhLib.connect();
+        //checkCreateWeekDir();
 
         // Download the web pages for the bonus products per afdeling
         ArrayList<String> afdelingen = generateAfdelingenList();
@@ -404,11 +406,11 @@ public class Main {
         System.out.println("This week's list read. wi_ids.size(): " + wi_ids.size());
 
         // Download web pages to the filesystem through a headless browser
-        headlessDownloadToFolder("week_" + CURRENT_WEEK + "\\HeadlessHTML_week_" + CURRENT_WEEK + "\\");
+        headlessDownloadToFolder("week_" + CURRENT_WEEK + "\\HeadlessHTML_week_" + CURRENT_WEEK + "\\", wi_ids);
         System.out.println("Done downloading headless HTML-files.");
 
         // Download plain html-files to the filesystem
-        downloadToFolder("week_" + CURRENT_WEEK + "\\HTML_week_" + CURRENT_WEEK + "\\");
+        downloadToFolder("week_" + CURRENT_WEEK + "\\HTML_week_" + CURRENT_WEEK + "\\", wi_ids);
         System.out.println("Done downloading HTML-files.");
 
         // Create and fill an array of Product with the .wi_id, .initial_index, .url and .filePath properties assigned.
