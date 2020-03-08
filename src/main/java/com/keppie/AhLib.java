@@ -3,17 +3,18 @@ package com.keppie;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import org.apache.commons.io.FileUtils;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.FileAlreadyExistsException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Properties;
 import java.util.Scanner;
 
 public class AhLib {
@@ -131,9 +132,29 @@ public class AhLib {
 
     // connect to ***REMOVED*** bonus db and return the Connection object
     public static Connection connect() throws SQLException {
-        String db_url = "***REMOVED***";
-        String db_user = "***REMOVED***";
-        String db_password = "***REMOVED***";
+        String db_url = "";
+        String db_user = "";
+        String db_password = "";
+
+        JSONParser jsonParser = new JSONParser();
+        try (FileReader reader = new FileReader("dbCredentials.json")) {
+            Object obj = jsonParser.parse(reader);
+            JSONObject dbCredentials = (JSONObject) obj;
+
+            db_url = (String) dbCredentials.get("db_url");
+            db_user = (String) dbCredentials.get("db_user");
+            db_password = (String) dbCredentials.get("db_password");
+            return DriverManager.getConnection(db_url, db_user, db_password);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            System.exit(872);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.exit(872);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            System.exit(872);
+        }
         return DriverManager.getConnection(db_url, db_user, db_password);
     }
 
@@ -163,6 +184,18 @@ public class AhLib {
         String absPath = new File(toFolderPath + pageName + ".html").getAbsolutePath();
         //SAVE TO THE FILESYSTEM
         page.save(new File(absPath));
+    }
+
+    public static boolean createBonusTable(int CURRENT_WEEK) throws IOException, SQLException {
+        String sql = Files.readString(Paths.get("src\\main\\java\\com\\keppie\\createWeekTable.sql"), StandardCharsets.UTF_8);
+        sql = sql.replace("{CURRENT_WEEK}", Integer.toString(CURRENT_WEEK));
+
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)
+        ) {
+            boolean returned = pstmt.execute();
+            return returned;
+        }
     }
 
     // insert product in db
@@ -229,16 +262,17 @@ public class AhLib {
         String bonus_type = product.getBonus_type();
         String stapelen_tot = product.getStapelen_tot();
 
-        if (bonus_type.equals("1+1")) {
-            return 50.00;
-        } else if (bonus_type.equals("2+1")) {
-            return 33.33;
-        } else if (bonus_type.equals("3+1")) {
-            return 25.00;
-        } else if (bonus_type.equals("2e_halve_prijs")) {
-            return 25.00;
-        } else if (bonus_type.equals("3_is_2")) {
-            return 33.33;
+        switch (bonus_type) {
+            case "1+1":
+                return 50.00;
+            case "2+1":
+                return 33.33;
+            case "3+1":
+                return 25.00;
+            case "2e_halve_prijs":
+                return 25.00;
+            case "3_is_2":
+                return 33.33;
         }
 
         int price_cent = product.getPrice_cent();

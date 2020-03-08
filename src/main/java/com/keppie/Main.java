@@ -4,13 +4,21 @@
 
 package com.keppie;
 // Git: master
+import org.apache.commons.lang3.ArrayUtils;
+import org.threeten.extra.YearWeek;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 
@@ -19,9 +27,9 @@ import java.util.stream.Collectors;
 
 //todo for new week {CURRENT_WEEK}:
 /*
-// - 103 change the constant CURRENT_WEEK to the new number
-// - 103 create table in ***REMOVED*** db
-// - 103 uncomment code
+// - 104 change the constant CURRENT_WEEK to the new number
+// - 104 create table in ***REMOVED*** db
+// - 104 uncomment code
 */
 
 //todo list:
@@ -59,15 +67,16 @@ import java.util.stream.Collectors;
 public class Main {
 
     public static final boolean ONLY_DO_FIRST_THREE = true;
-    public static final int CURRENT_WEEK = 103;
+    public static final int CURRENT_WEEK = 105;
     public static final String BASE_URL = "https://www.ah.nl/producten/product/";
-    enum dbType{UNKNOWN, VARCHAR16, VARCHAR64, TEXT, INT, DOUBLE};
+    enum dbType{UNKNOWN, VARCHAR16, VARCHAR64, TEXT, INT, DOUBLE}
 
     static ArrayList<String> wi_ids;
     static Product[] products;
     static Pattern WAS_NOW_PATTERN;
     static Pattern WAS_NOW_PATTERN_GALL;
     static Matcher matcher;
+    static boolean fromBat;
 
     static void downloadToFolder(String toPath, ArrayList<String> wi_ids) throws IOException {
         for (int i = 0; i < wi_ids.size(); i++) {
@@ -351,8 +360,18 @@ public class Main {
         final long startTime = System.nanoTime();
         System.out.println(startTime);
 
-        Connection conn = AhLib.connect();
-        //checkCreateWeekDir();
+        if (ArrayUtils.contains(args, "fromBat")) {
+            System.out.println("Application runs from batch file.");
+            fromBat = true;
+        }
+
+        int localWeekNumber = YearWeek.from(LocalDateTime.now()).getWeek();
+        System.out.println("localWeekNumber: " + localWeekNumber);
+
+        AhLib.createBonusTable(CURRENT_WEEK);
+        System.out.println("Table created in database.");
+        checkCreateWeekDir();
+        System.out.println("Folders created.");
 
         // Download the web pages for the bonus products per afdeling
         ArrayList<String> afdelingen = generateAfdelingenList();

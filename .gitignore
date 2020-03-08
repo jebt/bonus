@@ -98,15 +98,6 @@ hs_err_pid*
 /.idea/
 *.iml
 
-# Project Specific
-/week_*/
-/ScrapeList/
-/Archive/
-/lib/commons-io-2.6/docs/org/apache/commons/io/
-/lib/commons-io-2.6/
-/src/com/keppie/Data/
-/src/com/keppie/log/
-
 # gitignore/Maven.gitignore
 target/
 pom.xml.tag
@@ -120,4 +111,15 @@ buildNumber.properties
 # https://github.com/takari/maven-wrapper#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
 
+# Project Specific
+/week_*/
+/ScrapeList/
+/Archive/
+/lib/commons-io-2.6/docs/org/apache/commons/io/
+/lib/commons-io-2.6/
+/src/com/keppie/Data/
+/src/com/keppie/log/
+/dbCredentials.json
+
 # Other Ignores
+/run.bat
