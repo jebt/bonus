@@ -20,7 +20,7 @@ CREATE TABLE public.week_{CURRENT_WEEK}
 TABLESPACE pg_default;
 
 ALTER TABLE public.week_{CURRENT_WEEK}
-    OWNER to ***REMOVED***;
+    OWNER to postgres;
 
 CREATE UNIQUE INDEX idx_wi_id_{CURRENT_WEEK}
     ON public.week_{CURRENT_WEEK} USING btree

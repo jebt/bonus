@@ -1,12 +1,12 @@
 package com.keppie;
 
 import com.gargoylesoftware.htmlunit.BrowserVersion;
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -38,6 +38,11 @@ public class AhLib {
 
     // Download an HTML-file from a URL and save it to the filesystem
     public static void dlHtml(String urlBase, String wi_id, String toPath) throws IOException {
+        if (Files.exists(Paths.get(toPath + wi_id + ".html"))) {
+            System.out.println(toPath + wi_id + ".html" + " file already exists!");
+            return;
+        }
+
         java.net.URL url;
         InputStream is = null;
         BufferedReader br;
@@ -87,15 +92,15 @@ public class AhLib {
         HtmlPage page;
         String urlText = urlBase + wi_id;
         try (final WebClient webClient = new WebClient(BrowserVersion.BEST_SUPPORTED)) {
-            webClient.getOptions().setJavaScriptEnabled(false);
-            webClient.getOptions().setCssEnabled(false);
+            webClient.getOptions().setJavaScriptEnabled(true); //todo false?
+            webClient.getOptions().setCssEnabled(true); //todo false?
             webClient.setCssErrorHandler(new com.gargoylesoftware.htmlunit.SilentCssErrorHandler());
             webClient.getOptions().setPrintContentOnFailingStatusCode(false);
             webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
 
             page = webClient.getPage(urlText);
-            Thread.sleep(100);
-            webClient.waitForBackgroundJavaScript(100);
+            Thread.sleep(500);
+            webClient.waitForBackgroundJavaScript(500);
 
             String absPath = new File(toPath + wi_id + ".html").getAbsolutePath();
             //SAVE TO THE FILESYSTEM
@@ -130,7 +135,7 @@ public class AhLib {
         }
     }
 
-    // connect to ***REMOVED*** bonus db and return the Connection object
+    // connect to postgres bonus db and return the Connection object
     public static Connection connect() throws SQLException {
         String db_url = "";
         String db_user = "";
@@ -174,16 +179,25 @@ public class AhLib {
             webClient.getOptions().setJavaScriptEnabled(false);
             webClient.getOptions().setCssEnabled(false);
             webClient.setCssErrorHandler(new com.gargoylesoftware.htmlunit.SilentCssErrorHandler());
-            webClient.getOptions().setPrintContentOnFailingStatusCode(false);
-            webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
+            webClient.getOptions().setPrintContentOnFailingStatusCode(true);
+            webClient.getOptions().setThrowExceptionOnFailingStatusCode(true);
 
             page = webClient.getPage(urlText);
-            Thread.sleep(100);
-            webClient.waitForBackgroundJavaScript(100);
+            Thread.sleep(500);
+            webClient.waitForBackgroundJavaScript(500);
+
+            String absPath = new File(toFolderPath + pageName + ".html").getAbsolutePath();
+            //SAVE TO THE FILESYSTEM
+            page.save(new File(absPath));
+
+        } catch (IOException e) {
+            //..
+        } catch (InterruptedException e) {
+            //..
+        } catch (FailingHttpStatusCodeException e) {
+            //..
         }
-        String absPath = new File(toFolderPath + pageName + ".html").getAbsolutePath();
-        //SAVE TO THE FILESYSTEM
-        page.save(new File(absPath));
+
     }
 
     public static boolean createBonusTable(int CURRENT_WEEK) throws IOException, SQLException {
@@ -242,20 +256,6 @@ public class AhLib {
         return kp_id;
     }
 
-    // write an int value to a db field
-    public static int dbUpdate(String wi_id, String dbField, int value, int CURRENT_WEEK) {
-        int affectedrows = 0;
-        //.. write int value to db field
-        return affectedrows;
-    }
-
-    // write a double value to a db field
-    public static int dbUpdate(String wi_id, String dbField, double value, int CURRENT_WEEK) {
-        int affectedrows = 0;
-        //.. write double value to db field
-        return affectedrows;
-    }
-
     // deduce bonus percentage
     public static double bonus_percentage(Product product) {
         double bonus_percentage = -1.00;
@@ -266,13 +266,11 @@ public class AhLib {
             case "1+1":
                 return 50.00;
             case "2+1":
-                return 33.33;
-            case "3+1":
-                return 25.00;
-            case "2e_halve_prijs":
-                return 25.00;
             case "3_is_2":
                 return 33.33;
+            case "3+1":
+            case "2e_halve_prijs":
+                return 25.00;
         }
 
         int price_cent = product.getPrice_cent();
@@ -335,14 +333,6 @@ public class AhLib {
             //if (extractionField.getName().equals("foo")) {continue;}
             //if (extractionField.getName().equals("bar")) {continue;}
             extractionField.execute(product);
-        }
-    }
-
-    // loop over products[] and execute the extraction fields
-    public static void extractFields(Product[] products) throws IOException {
-        for (int i = 0; i < products.length; i++) {
-            Product product = products[i];
-            extractFields(product);
         }
     }
 

@@ -13,6 +13,7 @@ public class Product {
     private int price_cent = -1;
     private int bonus_price_cent = -1;
     private String html_text;
+    private Main.bonusType bonusType;
 
     // extracted string fields:
     private String price_whole_euros = "";
@@ -34,6 +35,12 @@ public class Product {
     }
 
     // getters and setters below:
+    public Main.bonusType getBonusType() {
+        return bonusType;
+    }
+    public void setBonusType(Main.bonusType bonusType) {
+        this.bonusType = bonusType;
+    }
     public String getWi_id() {
         return wi_id;
     }

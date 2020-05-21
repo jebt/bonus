@@ -1,82 +1,40 @@
-// "BonusPercentage"
-// author: roelantvanderhilst@gmail.com
-// don't worry: https://www.youtube.com/watch?v=SETnK2ny1R0
+/*
+ BonusPercentage
+ author: roelantvanderhilst@gmail.com
+ don't worry: https://www.youtube.com/watch?v=SETnK2ny1R0
+*/
 
 package com.keppie;
-// Git: master
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.threeten.extra.YearWeek;
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.LocalDate;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
-
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-//todo for new week {CURRENT_WEEK}:
-/*
-// - 104 change the constant CURRENT_WEEK to the new number
-// - 104 create table in ***REMOVED*** db
-// - 104 uncomment code
-*/
-
-//todo list:
-/*
- todo: change field names in database (no capitals!)
- TODO: reflect these field name changes in the code!!
-
- todo: automatically build a categories tree: lvl0: product, lvl1: afdelingen, lvl2: ... CARE: a product can be in multiple categories!
- todo: make category inherit tree(superclasses/subclasses), assign categories/subcategories so we can do some fancy sorting and collapse/expand action in a future frontend
- todo: add all level of categories as fields to the products
-
- todo: https://www.vojtechruzicka.com/idea-best-plugins/
-
- todo: schedule the entire weekly process to as soon as the new bonus info is available (monday at 00:15?).
- todo: see what we can do with next week bonus (becomes available somewhere halfway in/end of the week? determine!)
-
- todo: for bonus_type="stapelen" show how many you must buy to get the discount
-
- todo: set all fieldnames of the table as String constants and use those trough out the code?
-
- todo: use hashmap of stringlist solution for the extraction fields?
- todo: use threads for the parsing (1 per extraction field) to increase processing speeds?
- todo: use hibernate?
-
- todo: replace all paths with constants
- todo: make it so that all the folders and files get created after checks if they exist. If they do exist already give error and abort
- todo: each week should get it's own superfolder with all the files and subfolders for that week within it
- todo: clean up all the deprecated and unused methods
-
- todo: catch and handle file already exists bug exception during the mass headless html download. delete folder(and file) of the particular html and try again. for continuity
-
- todo: t/m dinsdag aanbieidingen handlen
-*/
-
 public class Main {
 
-    public static final boolean ONLY_DO_FIRST_THREE = true;
-    public static final int CURRENT_WEEK = 105;
+    public static final boolean ONLY_DO_FIRST_THREE = true; //todo set to false
     public static final String BASE_URL = "https://www.ah.nl/producten/product/";
-    enum dbType{UNKNOWN, VARCHAR16, VARCHAR64, TEXT, INT, DOUBLE}
+    enum dbType{UNKNOWN, VARCHAR16, VARCHAR64, TEXT, INT, DOUBLE};
+    enum bonusType{X_VOOR_Y, STAPELEN, X_PLUS_Y, TWEEDE_HALVE_PRIJS, PERCENT, UNKNOWN};
 
-    static ArrayList<String> wi_ids;
     static Product[] products;
     static Pattern WAS_NOW_PATTERN;
     static Pattern WAS_NOW_PATTERN_GALL;
     static Matcher matcher;
     static boolean fromBat;
+    public static int CURRENT_WEEK = 139;
 
     static void downloadToFolder(String toPath, ArrayList<String> wi_ids) throws IOException {
         for (int i = 0; i < wi_ids.size(); i++) {
@@ -309,7 +267,7 @@ public class Main {
                 "                                <span class=\"price-amount_fractional__2DgNL\">\n" +
                 ")(\\d*)");
     }
-    static int wasNow(Product product) throws IOException {
+    static int wasNow(Product product) {
         int bonus_price = -1;
         String content = product.getHtml_text();
         matcher = WAS_NOW_PATTERN.matcher(content);
@@ -352,26 +310,32 @@ public class Main {
         System.out.println("This week's folders created.");
     }
 
-    //todo####################################################################################################
+    public static void main(String[] args) throws IOException, InterruptedException, SQLException {
 
-    public static void main(String[] args) throws IOException, InterruptedException, SQLException, ClassNotFoundException {
-
-        System.out.println("Starting process for week " + CURRENT_WEEK + "...");
-        final long startTime = System.nanoTime();
+        final long startTime = System.nanoTime(); //todo System.currentTimeMillis() better? it's millis since 1970, doesn't reset each day like nanoTime().
         System.out.println(startTime);
+        SimpleDateFormat simpleDateFormatdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS");
+        Date date_start = new Date();
+        String date_start_string = simpleDateFormatdf.format(date_start);
+        System.out.println("Timestamp: " + date_start_string);
 
         if (ArrayUtils.contains(args, "fromBat")) {
             System.out.println("Application runs from batch file.");
             fromBat = true;
         }
+        if (ArrayUtils.contains(args, "autoWeek")) {
+            System.out.println("CURRENT_WEEK is overwritten automatically.");
+            int localWeekNumber = YearWeek.from(LocalDateTime.now()).getWeek();
+            System.out.println("localWeekNumber: " + localWeekNumber);
+            CURRENT_WEEK = localWeekNumber;
+        }
 
-        int localWeekNumber = YearWeek.from(LocalDateTime.now()).getWeek();
-        System.out.println("localWeekNumber: " + localWeekNumber);
+        System.out.println("Starting process for week " + CURRENT_WEEK + "...");
 
-        AhLib.createBonusTable(CURRENT_WEEK);
+        AhLib.createBonusTable(CURRENT_WEEK); //todo: uncomment
         System.out.println("Table created in database.");
-        checkCreateWeekDir();
-        System.out.println("Folders created.");
+        checkCreateWeekDir(); //todo: uncomment
+        System.out.println("Folders created."); //todo: uncomment
 
         // Download the web pages for the bonus products per afdeling
         ArrayList<String> afdelingen = generateAfdelingenList();
@@ -425,7 +389,18 @@ public class Main {
         System.out.println("This week's list read. wi_ids.size(): " + wi_ids.size());
 
         // Download web pages to the filesystem through a headless browser
-        headlessDownloadToFolder("week_" + CURRENT_WEEK + "\\HeadlessHTML_week_" + CURRENT_WEEK + "\\", wi_ids);
+        //headlessDownloadToFolder("week_" + CURRENT_WEEK + "\\HeadlessHTML_week_" + CURRENT_WEEK + "\\", wi_ids); //todo uncomment?
+        for (int i = 0; i < wi_ids.size(); i++) {
+            if (ONLY_DO_FIRST_THREE) {
+                if (i > 2) break;
+            }
+            String wi_id = wi_ids.get(i);
+            toPath = "week_" + CURRENT_WEEK + "\\HeadlessHTML_week_" + CURRENT_WEEK + "\\";
+            leftUrl = "https://www.ah.nl/producten/product/";
+            String url = leftUrl + wi_id;
+            System.out.printf("Headless downloading %s ...%n", url);
+            AhLib.dlHtmlHeadlessGeneral(url, toPath, wi_id);
+        }
         System.out.println("Done downloading headless HTML-files.");
 
         // Download plain html-files to the filesystem
@@ -459,6 +434,10 @@ public class Main {
                 product.setPrice_cent(AhLib.price_cent(product));
                 product.setPrice_total_cent(AhLib.price_total_cent(product));
                 product.setBonus_percentage(AhLib.bonus_percentage(product));
+
+                //DiscountCalculatorAbstract discountCalculator = DiscountCalculatorFactory.getDiscountCalculator(product.getBonusType());
+                //product.setBonus_percentage(discountCalculator.getDiscountPercentage(product));
+
             } else {
                 System.out.println("Html file was not found for this product, fields not extracted!");
                 product.setBonus_type("HTML NOT FOUND");
@@ -466,6 +445,9 @@ public class Main {
             AhLib.insertProduct(product, "week_" + CURRENT_WEEK);
         }
 
+        Date date_end = new Date();
+        String date_end_string = simpleDateFormatdf.format(date_end);
+        System.out.println("Timestamp: " + date_end_string);
         final long endTime = System.nanoTime();
         final long duration = endTime - startTime;
         long durationSeconds = TimeUnit.NANOSECONDS.toSeconds(duration);
