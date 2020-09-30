@@ -1,8 +1,6 @@
 package com.keppie;
 
-import com.gargoylesoftware.htmlunit.BrowserVersion;
-import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
-import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.*;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -39,7 +37,7 @@ public class AhLib {
     // Download an HTML-file from a URL and save it to the filesystem
     public static void dlHtml(String urlBase, String wi_id, String toPath) throws IOException {
         if (Files.exists(Paths.get(toPath + wi_id + ".html"))) {
-            System.out.println(toPath + wi_id + ".html" + " file already exists!");
+            Main.log(toPath + wi_id + ".html" + " file already exists!");
             return;
         }
 
@@ -82,11 +80,11 @@ public class AhLib {
     // Download an HTML-file from a URL through a headless browser and save it to the filesystem
     public static void dlHtmlHeadless(final String urlBase, final String wi_id, final String toPath) throws IOException, InterruptedException {
         if (Files.exists(Paths.get(toPath + wi_id + "\\"))) {
-            System.out.println(toPath + wi_id + "\\" + " folder already exists!");
+            Main.log(toPath + wi_id + "\\" + " folder already exists!");
             return;
         }
         if (Files.exists(Paths.get(toPath + wi_id + ".html"))) {
-            System.out.println(toPath + wi_id + ".html" + " file already exists!");
+            Main.log(toPath + wi_id + ".html" + " file already exists!");
             return;
         }
         HtmlPage page;
@@ -111,7 +109,7 @@ public class AhLib {
             if (e.getMessage().substring(0, 18).equals("File already exists")) {
                 // delete folder and/or file and try again
                 if (Files.exists(Paths.get(toPath + wi_id + "\\"))) {
-                    System.out.println(toPath + wi_id + "\\" + " folder exists, deleting");
+                    Main.log(toPath + wi_id + "\\" + " folder exists, deleting");
                     // delete files inside the folder and then the folder
                     File dirToDelete = new File(toPath + wi_id + "\\");
                     String[] entries = dirToDelete.list();
@@ -123,11 +121,11 @@ public class AhLib {
                     dirToDelete.delete();
                 }
                 if (Files.exists(Paths.get(toPath + wi_id + ".html"))) {
-                    System.out.println(toPath + wi_id + ".html" + " file exists, deleting");
+                    Main.log(toPath + wi_id + ".html" + " file exists, deleting");
                     File fileToDelete = new File(toPath + wi_id + ".html");
                     fileToDelete.delete();
                 }
-                System.out.println("Trying again...");
+                Main.log("Trying again...");
                 dlHtmlHeadless(urlBase, wi_id, toPath);
             } else {
                 throw e;
@@ -166,43 +164,78 @@ public class AhLib {
     // general headless html download method
     public static void dlHtmlHeadlessGeneral(String url, String toFolderPath, String pageName) throws IOException, InterruptedException {
         if (Files.exists(Paths.get(toFolderPath + pageName + "\\"))) {
-            System.out.println(toFolderPath + pageName + "\\" + " folder already exists!");
+            Main.log(toFolderPath + pageName + "\\" + " folder already exists!");
             return;
         }
         if (Files.exists(Paths.get(toFolderPath + pageName + ".html"))) {
-            System.out.println(toFolderPath + pageName + ".html" + " file already exists!");
+            Main.log(toFolderPath + pageName + ".html" + " file already exists!");
             return;
         }
-        HtmlPage page;
-        String urlText = url;
-        try (final WebClient webClient = new WebClient(BrowserVersion.BEST_SUPPORTED)) {
-            webClient.getOptions().setJavaScriptEnabled(false);
-            webClient.getOptions().setCssEnabled(false);
-            webClient.setCssErrorHandler(new com.gargoylesoftware.htmlunit.SilentCssErrorHandler());
-            webClient.getOptions().setPrintContentOnFailingStatusCode(true);
-            webClient.getOptions().setThrowExceptionOnFailingStatusCode(true);
 
-            page = webClient.getPage(urlText);
-            Thread.sleep(500);
-            webClient.waitForBackgroundJavaScript(500);
+        //HtmlPage page;
+        String urlText = url;
+        //try (final WebClient webClient = new WebClient(BrowserVersion.BEST_SUPPORTED)) {
+        try (final WebClient webClient = new WebClient()) {
+            //webClient.getOptions().setJavaScriptEnabled(false);
+            //webClient.getOptions().setCssEnabled(false);
+            //webClient.setCssErrorHandler(new com.gargoylesoftware.htmlunit.SilentCssErrorHandler());
+            webClient.getOptions().setPrintContentOnFailingStatusCode(false);
+            webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
+            webClient.getOptions().setThrowExceptionOnScriptError(false);
+
+            Page page = webClient.getPage(urlText);
+            WebResponse response = page.getWebResponse();
+            String content = response.getContentAsString();
+            //File testFile = new File("testFile123.html");
+            //testFile.createNewFile();
 
             String absPath = new File(toFolderPath + pageName + ".html").getAbsolutePath();
+            Main.log(absPath);
+            FileWriter testWriter = new FileWriter(absPath);
+            testWriter.write(content);
+            testWriter.close();
+
+            //page = webClient.getPage(urlText);
+            //Thread.sleep(500);
+            //webClient.waitForBackgroundJavaScript(500);
+
             //SAVE TO THE FILESYSTEM
-            page.save(new File(absPath));
+            //page.save(new File(absPath));
 
         } catch (IOException e) {
-            //..
-        } catch (InterruptedException e) {
-            //..
+            Main.log("IOException e");
+            e.printStackTrace();
         } catch (FailingHttpStatusCodeException e) {
-            //..
+            Main.log("FailingHttpStatusCodeException e");
+            e.printStackTrace();
         }
 
     }
 
     public static boolean createBonusTable(int CURRENT_WEEK) throws IOException, SQLException {
+        int serialNumber = 0;
+        boolean determinedTableName = false;
+        String suffix = CURRENT_WEEK + "_" + serialNumber;
+
+        while(determinedTableName == false) {
+            suffix = CURRENT_WEEK + "_" + serialNumber;
+            try (Connection con = connect()) {
+                DatabaseMetaData meta = con.getMetaData();
+                String tableName = "week_" + suffix;
+                ResultSet res = meta.getTables(null, null, tableName, new String[]{"TABLE"});
+                if (res.next()) {
+                    Main.log(tableName + " already exists as a table in the database, incrementing serialNumber...");
+                    serialNumber++;
+                    continue;
+                } else {
+                    determinedTableName = true;
+                    Main.setTableName(tableName);
+                }
+            }
+        }
+
         String sql = Files.readString(Paths.get("src\\main\\java\\com\\keppie\\createWeekTable.sql"), StandardCharsets.UTF_8);
-        sql = sql.replace("{CURRENT_WEEK}", Integer.toString(CURRENT_WEEK));
+        sql = sql.replace("{CURRENT_WEEK}", suffix);
 
         try (Connection conn = connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)

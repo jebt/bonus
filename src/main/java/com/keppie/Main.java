@@ -18,13 +18,16 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.lang.System.exit;
+
 public class Main {
 
-    public static final boolean ONLY_DO_FIRST_THREE = true; //todo set to false
+    public static final boolean ONLY_DO_FIRST_THREE = false; //todo set to false
     public static final String BASE_URL = "https://www.ah.nl/producten/product/";
     enum dbType{UNKNOWN, VARCHAR16, VARCHAR64, TEXT, INT, DOUBLE};
     enum bonusType{X_VOOR_Y, STAPELEN, X_PLUS_Y, TWEEDE_HALVE_PRIJS, PERCENT, UNKNOWN};
@@ -34,14 +37,18 @@ public class Main {
     static Pattern WAS_NOW_PATTERN_GALL;
     static Matcher matcher;
     static boolean fromBat;
-    public static int CURRENT_WEEK = 139;
+    public static int CURRENT_WEEK = 228;
+    static boolean autoWeek = true;
+    static String tableName = "";
+
+    static Logger logger;
 
     static void downloadToFolder(String toPath, ArrayList<String> wi_ids) throws IOException {
         for (int i = 0; i < wi_ids.size(); i++) {
             if (ONLY_DO_FIRST_THREE) {
                 if (i > 2) break;
             }
-            System.out.println(i+1 + "/" + wi_ids.size() + " Downloading " + wi_ids.get(i) + " HTML-File from " +
+            log(i+1 + "/" + wi_ids.size() + " Downloading " + wi_ids.get(i) + " HTML-File from " +
                     BASE_URL + wi_ids.get(i) + " ...");
             AhLib.dlHtml(BASE_URL, wi_ids.get(i), toPath);
         }
@@ -51,7 +58,7 @@ public class Main {
             if (ONLY_DO_FIRST_THREE) {
                 if (i > 2) break;
             }
-            System.out.println(i+1 + "/" + wi_ids.size() + " Downloading (headless) " + wi_ids.get(i) + " HTML-File from " +
+            log(i+1 + "/" + wi_ids.size() + " Downloading (headless) " + wi_ids.get(i) + " HTML-File from " +
                     BASE_URL + wi_ids.get(i) + " ...");
             AhLib.dlHtmlHeadless(BASE_URL, wi_ids.get(i), toPath);
         }
@@ -285,8 +292,8 @@ public class Main {
     static void checkCreateWeekDir(){
         String dirPath = "week_" + CURRENT_WEEK + "\\";
         if (Files.exists(Paths.get(dirPath))) {
-            System.out.println(dirPath + " directory already exists! Terminating.");
-            System.exit(871);
+            log(dirPath + " directory already exists! Terminating.");
+            exit(871);
         }
         File weekDir = new File(dirPath);
         weekDir.mkdir();
@@ -307,35 +314,64 @@ public class Main {
         subDir = new File(subPath);
         subDir.mkdir();
 
-        System.out.println("This week's folders created.");
+        log("This week's folders created.");
+    }
+    public static void testMethod() throws IOException, InterruptedException {
+        File weekDir = new File("TESTMETHOD");
+        weekDir.mkdir();
+        AhLib.dlHtmlHeadlessGeneral("http://www.columbia.edu/~fdc/sample.html", "TESTMETHOD", String.valueOf(System.nanoTime()));
+    }
+    static void log(String message) {
+        try {
+            logger.log(message);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    static void setTableName(String name) {
+        tableName = name;
     }
 
     public static void main(String[] args) throws IOException, InterruptedException, SQLException {
 
-        final long startTime = System.nanoTime(); //todo System.currentTimeMillis() better? it's millis since 1970, doesn't reset each day like nanoTime().
-        System.out.println(startTime);
+        final long startTime = System.nanoTime(); //todo System.currentTimeMillis() better? it's millis since 1970,//doesn't reset each day like nanoTime().
         SimpleDateFormat simpleDateFormatdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS");
         Date date_start = new Date();
         String date_start_string = simpleDateFormatdf.format(date_start);
-        System.out.println("Timestamp: " + date_start_string);
+
+        logger = new Logger();
+
+        //testMethod();
+        //exit(69);
+
+        java.util.logging.Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
+
+        log(String.valueOf(startTime));
+        log("Timestamp: " + date_start_string);
 
         if (ArrayUtils.contains(args, "fromBat")) {
-            System.out.println("Application runs from batch file.");
+            log("Application runs from batch file.");
             fromBat = true;
         }
         if (ArrayUtils.contains(args, "autoWeek")) {
-            System.out.println("CURRENT_WEEK is overwritten automatically.");
+            autoWeek = true;
+        }
+
+        if (autoWeek) {
+            log("CURRENT_WEEK is overwritten automatically.");
             int localWeekNumber = YearWeek.from(LocalDateTime.now()).getWeek();
-            System.out.println("localWeekNumber: " + localWeekNumber);
+            log("localWeekNumber: " + localWeekNumber);
             CURRENT_WEEK = localWeekNumber;
         }
 
-        System.out.println("Starting process for week " + CURRENT_WEEK + "...");
+
+
+        log("Starting process for week " + CURRENT_WEEK + "...");
 
         AhLib.createBonusTable(CURRENT_WEEK); //todo: uncomment
-        System.out.println("Table created in database.");
-        checkCreateWeekDir(); //todo: uncomment
-        System.out.println("Folders created."); //todo: uncomment
+        log("Table created in database.");
+        //checkCreateWeekDir(); //todo: uncomment
+        //log("Folders created."); //todo: uncomment
 
         // Download the web pages for the bonus products per afdeling
         ArrayList<String> afdelingen = generateAfdelingenList();
@@ -347,13 +383,13 @@ public class Main {
                 if (i > 2) break;
             }
             String afdeling = afdelingen.get(i);
-            System.out.println("Downloading afdeling bonus pages through headless browser: " + afdeling + "...");
+            log("Downloading afdeling bonus pages through headless browser: " + afdeling + "...");
             String url = leftUrl + afdeling + rightUrl;
             AhLib.dlHtmlHeadlessGeneral(url, toPath, afdeling);
         }
 
         // Extract the bonus wi_ids and make a list eliminating duplicates
-        System.out.println("Extract the bonus wi_ids and make a list eliminating duplicates...");
+        log("Extract the bonus wi_ids and make a list eliminating duplicates...");
         String pathForRegex;
         String content;
         final Pattern WI_PATTERN = Pattern.compile("(href=\"/producten/product/wi)(\\d*)(/)");
@@ -374,7 +410,7 @@ public class Main {
             }
         }
         ArrayList<String> wi_ids_noDupes = (ArrayList<String>) wi_ids.stream().distinct().collect(Collectors.toList());
-        System.out.println("Number of unique wi_ids: " + wi_ids_noDupes.size());
+        log("Number of unique wi_ids: " + wi_ids_noDupes.size());
 
         // Write this week's bonus wi_ids to a text file
         FileWriter writer = new FileWriter("week_" + CURRENT_WEEK + "\\" + "wi_ids_week_" + CURRENT_WEEK + "_distinct.txt");
@@ -382,14 +418,15 @@ public class Main {
             writer.write(str + System.lineSeparator());
         }
         writer.close();
-        System.out.println("List saved.");
+        log("List saved.");
 
         // Read in this week's bonus wi_id list
         wi_ids = AhLib.fileToList("week_" + CURRENT_WEEK + "\\" + "wi_ids_week_" + CURRENT_WEEK + "_distinct.txt");
-        System.out.println("This week's list read. wi_ids.size(): " + wi_ids.size());
+        log("This week's list read. wi_ids.size(): " + wi_ids.size());
 
+        /*//todo uncomment?
         // Download web pages to the filesystem through a headless browser
-        //headlessDownloadToFolder("week_" + CURRENT_WEEK + "\\HeadlessHTML_week_" + CURRENT_WEEK + "\\", wi_ids); //todo uncomment?
+        //headlessDownloadToFolder("week_" + CURRENT_WEEK + "\\HeadlessHTML_week_" + CURRENT_WEEK + "\\", wi_ids);
         for (int i = 0; i < wi_ids.size(); i++) {
             if (ONLY_DO_FIRST_THREE) {
                 if (i > 2) break;
@@ -401,25 +438,26 @@ public class Main {
             System.out.printf("Headless downloading %s ...%n", url);
             AhLib.dlHtmlHeadlessGeneral(url, toPath, wi_id);
         }
-        System.out.println("Done downloading headless HTML-files.");
+        log("Done downloading headless HTML-files.");
+        */
 
         // Download plain html-files to the filesystem
         downloadToFolder("week_" + CURRENT_WEEK + "\\HTML_week_" + CURRENT_WEEK + "\\", wi_ids);
-        System.out.println("Done downloading HTML-files.");
+        log("Done downloading HTML-files.");
 
         // Create and fill an array of Product with the .wi_id, .initial_index, .url and .filePath properties assigned.
         products = generateProducts(wi_ids);
-        System.out.println("Array of products created. Fresh out of the oven.");
+        log("Array of products created. Fresh out of the oven.");
 
         compileRegexPatterns();
-        System.out.println("Regex patterns compiled and ready to match some text, yo!");
+        log("Regex patterns compiled and ready to match some text, yo!");
 
         // master loop:
         for (int i = 0; i < products.length; i++) {
             if (ONLY_DO_FIRST_THREE) {
                 if (i > 2) break;
             }
-            System.out.println("Processing product " + (i+1) + "/" + products.length + "...");
+            log("Processing product " + (i+1) + "/" + products.length + "...");
             Product product = products[i];
             if (Files.exists(Paths.get(product.getFile_path()))) {
                 AhLib.extractFields(product);
@@ -439,19 +477,20 @@ public class Main {
                 //product.setBonus_percentage(discountCalculator.getDiscountPercentage(product));
 
             } else {
-                System.out.println("Html file was not found for this product, fields not extracted!");
+                log("Html file was not found for this product, fields not extracted!");
                 product.setBonus_type("HTML NOT FOUND");
             }
-            AhLib.insertProduct(product, "week_" + CURRENT_WEEK);
+            AhLib.insertProduct(product, tableName);
         }
 
         Date date_end = new Date();
         String date_end_string = simpleDateFormatdf.format(date_end);
-        System.out.println("Timestamp: " + date_end_string);
+        log("Timestamp: " + date_end_string);
         final long endTime = System.nanoTime();
         final long duration = endTime - startTime;
         long durationSeconds = TimeUnit.NANOSECONDS.toSeconds(duration);
-        System.out.println(endTime);
-        System.out.println("Done! It took " + durationSeconds + " seconds.");
+        log(String.valueOf(endTime));
+        log("Done! It took " + durationSeconds + " seconds.");
+        logger.close();
     }
 }
